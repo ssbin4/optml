@@ -194,11 +194,9 @@ class PalmNet(object):
                                                                                        running_training_loss / len(training_data.dataset),
                                                                                        (running_training_correct_count.double() / len(training_data.dataset)).item()))
 
-            wandb.log({"train": {"loss": running_training_loss / len(training_data.dataset), "acc": (running_training_correct_count.double() / len(training_data.dataset))}})
+            #print("learning rate!!!!:",self.learning_rate_scheduler.get_last_lr())
             
-            wandb.log({"Learning rate": self.gd_optimizer.param_groups[0]['lr']})
-            
-            self.learning_rate_scheduler.step(running_training_loss / len(training_data.dataset))
+            self.learning_rate_scheduler.step()
 
             for param_group in self.gd_optimizer.param_groups:
                 logging.debug("current learning rate: %f", param_group['lr'])
@@ -252,8 +250,13 @@ class PalmNet(object):
                                                                                           running_validation_loss / len(validation_data.dataset),
                                                                                           validation_accuracy))
                 
-                wandb.log({"val":{"loss": running_validation_loss / len(validation_data.dataset), "acc": validation_accuracy}})
-
+                wandb.log({"train": {"loss": running_training_loss / len(training_data.dataset), "acc": (running_training_correct_count.double() / len(training_data.dataset))},
+                            "val":{"loss": running_validation_loss / len(validation_data.dataset), "acc": validation_accuracy},
+                            "learning_rate": self.gd_optimizer.param_groups[0]['lr']})
+            
+            else:
+                wandb.log({"train": {"loss": running_training_loss / len(training_data.dataset), "acc": (running_training_correct_count.double() / len(training_data.dataset))},
+                            "learning_rate": self.gd_optimizer.param_groups[0]['lr']})
         # orchestrate hook to keep track of metric
         #orchestrate.io.log_metric('accuracy', validation_accuracy)
 
