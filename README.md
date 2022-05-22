@@ -11,6 +11,18 @@ tar -xvzf cars_train.tgz
 tar -xvzf car_devkit.tgz
 ```
 
+### Prepare virtual environment
+
+```
+conda create --name cbm python=3.6.13
+conda env create --file environment.yaml
+```
+
+To activate the environment,
+```
+source activate cbm
+```
+
 ### Training
 
 Use optml.sh file.
