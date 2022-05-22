@@ -6,6 +6,12 @@ from resnet import PalmNet
 import logging
 from resnet_stanford_cars_cli import StanfordCarsCLI, Hyperparameters, CLI
 
+import torch
+import random
+import torch.backends.cudnn as cudnn
+
+import numpy as np
+
 
 class ResnetTrainingCLI(StanfordCarsCLI):
     def __init__(self):
@@ -103,5 +109,12 @@ class ResnetTrainingCLI(StanfordCarsCLI):
 
 
 if __name__ == "__main__":
+    torch.manual_seed(0)
+    torch.cuda.manual_seed(0)
+    torch.cuda.manual_seed_all(0)
+    np.random.seed(0)
+    cudnn.benchmark = False
+    cudnn.deterministic = True
+    random.seed(0)
     resnet_training_cli = ResnetTrainingCLI()
     resnet_training_cli.run_all()
