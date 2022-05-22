@@ -196,6 +196,8 @@ class PalmNet(object):
 
             wandb.log({"train": {"loss": running_training_loss / len(training_data.dataset), "acc": (running_training_correct_count.double() / len(training_data.dataset))}})
             
+            wandb.log({"Learning rate": self.gd_optimizer.param_groups[0]['lr']})
+            
             self.learning_rate_scheduler.step(running_training_loss / len(training_data.dataset))
 
             for param_group in self.gd_optimizer.param_groups:

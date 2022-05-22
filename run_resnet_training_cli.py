@@ -72,7 +72,7 @@ class ResnetTrainingCLI(StanfordCarsCLI):
                                                                              patience=parsed_cli_arguments[Hyperparameters.SCEDULER_RATE.value],
                                                                              verbose=True)
         elif lr_scheduler == 'const':
-            learning_rate_scheduler = torch.optim.lr_scheulder.StepLR(sgd_optimizer, 1000, gamma=1.0)
+            learning_rate_scheduler = torch.optim.lr_scheulder.StepLR(sgd_optimizer, parsed_cli_arguments[CLI.EPOCHS.value], gamma=1.0)
         elif lr_scheduler == 'step':
             learning_rate_scheduler = torch.optim.lr_scheduler.StepLR(sgd_optimizer, parsed_cli_arguments[Hyperparameters.SCEDULER_RATE.value], gamma=parsed_cli_arguments[Hyperparameters.LEARNING_RATE_SCHEDULER.value])
         elif lr_scheduler == 'exp':
