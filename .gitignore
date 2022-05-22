@@ -1,0 +1,7 @@
+CARS196/
+*.out
+model/
+wandb/
+checkpoint/
+__pycache__*
+orchestrate*
