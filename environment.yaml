@@ -91,4 +91,4 @@ dependencies:
     - wasabi==0.2.2
     - werkzeug==0.15.6
     - zipp==3.6.0
-prefix: /home/ssbin4/.conda/envs/cbm
+prefix: <your directory>/optml

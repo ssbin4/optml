@@ -5,3 +5,5 @@ wandb/
 checkpoint/
 __pycache__*
 orchestrate*
+*.sh
+*.txt
