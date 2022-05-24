@@ -60,7 +60,7 @@ class PalmNet(object):
 
     def __init__(self, validation_frequency, model,  model_checkpointing, torch_checkpoint_location,
                  epochs, gd_optimizer, loss_function, learning_rate_scheduler, lr_scheduler, init_lr, 
-                 gamma, t_max, eta_min, annealing_factor,scheduler_rate):
+                 gamma, t_0, t_mult, eta_min, annealing_factor,scheduler_rate,freeze_weights):
         self.validation_frequency = validation_frequency
         self.model = model
         model.to(device)
@@ -76,21 +76,26 @@ class PalmNet(object):
         self.lr_scheduler = lr_scheduler
         self.init_lr = init_lr
         self.gamma = gamma
-        self.t_max = t_max
+        self.t_0 = t_0
+        self.t_mult = t_mult
         self.eta_min = eta_min
         self.annealing_factor = annealing_factor
         self.scheduler_rate = scheduler_rate
+        self.freeze_weights = freeze_weights
         if self.model_checkpointing is not None:
             self.generate_directory()
 
     def generate_directory(self):
-        path_name = self.lr_scheduler + '_initlr_%0.3f' % self.init_lr
+        if self.freeze_weights:
+            path_name = "freeze_" + self.lr_scheduler + '_initlr_%0.4f' % self.init_lr
+        else:
+            path_name = self.lr_scheduler + '_initlr_%0.4f' % self.init_lr
         if self.lr_scheduler == 'step' or self.lr_scheduler == 'reduce':
             path_name += '_factor%0.3f_step%d' % (self.annealing_factor, self.scheduler_rate)
         elif self.lr_scheduler == 'exp':
             path_name += '_gamma%0.3f' % self.gamma
         elif self.lr_scheduler == 'cos':
-            path_name += '_tmax_%deta%0.3f' % (self.t_max, self.eta_min)
+            path_name += '_t0_%d_tmult%d_eta%0.3f' % (self.t_0, self.t_mult, self.eta_min)
 
         self.model_directory = os.path.join(self.torch_checkpoint_location,path_name)
         logging.info("generating training directory in %s", self.model_directory)
@@ -103,6 +108,7 @@ class PalmNet(object):
             os.mkdir(self.checkpoint_directory)
         
         project_name=path_name
+        
         wandb.init(project="lr_scheduling", name=path_name, entity="optml")
         """
         wandb.config = {
@@ -112,6 +118,8 @@ class PalmNet(object):
             "step": self.scheduler_rate,
             "gamma": self.gamma,
             "t_max": self.t_max,
+            "t_0": self.t_0,
+            "t_mult": self.t_mult,
             "eta_min": self.eta_min
         }
         """
@@ -195,8 +203,11 @@ class PalmNet(object):
                                                                                        (running_training_correct_count.double() / len(training_data.dataset)).item()))
 
             #print("learning rate!!!!:",self.learning_rate_scheduler.get_last_lr())
-            
-            self.learning_rate_scheduler.step()
+
+            if self.lr_scheduler == 'reduce':
+                self.learning_rate_scheduler.step(running_training_loss / len(training_data.dataset))
+            else:
+                self.learning_rate_scheduler.step()
 
             for param_group in self.gd_optimizer.param_groups:
                 logging.debug("current learning rate: %f", param_group['lr'])
@@ -271,7 +282,7 @@ class PalmNet(object):
         elif self.lr_scheduler == 'exp':
             path_name += 'gamma%0.2f' % self.gamma
         elif self.lr_scheduler == 'cos':
-            path_name += 't_max%deta_min%0.3f' % (self.t_max, self.eta_min)
+            path_name += 't0_%d_tmult%d_eta_min%0.3f' % (self.t_0, self.t_mult, self.eta_min)
         model_checkpoint_path = self.model_directory
         logging.info("saving model at %s", model_checkpoint_path)
         torch.save({'epoch': epoch, 'model_state_dict': self.model.state_dict(),

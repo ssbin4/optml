@@ -34,8 +34,10 @@ class ResnetTrainingCLI(StanfordCarsCLI):
                             help = "learning scheduler to experiment (added)", choices=['const', 'step', 'exp', 'cos', 'reduce'], required=True)
         parser.add_argument("--gamma", dest='gamma', type=float,
                             help = "gamma value used in exponential decay", default=0.95)
-        parser.add_argument("--t_max", dest='t_max', type=int,
-                            help = "t_max value used in cosine annealing decay", default=50)
+        parser.add_argument("--t_0", dest='t_0', type=int,
+                            help = "t_0 value used in cosine annealing decay. Number of iterations for the first restart", default=1)
+        parser.add_argument("--t_mult", dest='t_mult', type=int,
+                            help = "t_mult value used in cosine annealing decay", default=1)
         parser.add_argument("--eta_min", dest='eta_min', type=float,
                             help = "eta_min used in exponential decay", default=0.001)
         parser.add_argument("--" + Hyperparameters.MOMENTUM.value, dest=Hyperparameters.MOMENTUM.value, type=float,
@@ -78,8 +80,7 @@ class ResnetTrainingCLI(StanfordCarsCLI):
         elif lr_scheduler == 'exp':
             learning_rate_scheduler = torch.optim.lr_scheduler.ExponentialLR(sgd_optimizer, gamma=parsed_cli_arguments['gamma'])
         elif lr_scheduler == 'cos':
-            learning_rate_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(sgd_optimizer, T_max=parsed_cli_arguments['t_max'], eta_min=parsed_cli_arguments['eta_min'])
-
+            learning_rate_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(sgd_optimizer, T_0=parsed_cli_arguments['t_0'], T_mult=parsed_cli_arguments['t_mult'], eta_min=parsed_cli_arguments['eta_min'])
 
         logging.info("training model")
         palm_net = PalmNet(epochs=parsed_cli_arguments[CLI.EPOCHS.value], gd_optimizer=sgd_optimizer, model=resnet_pretrained_model,
@@ -91,10 +92,12 @@ class ResnetTrainingCLI(StanfordCarsCLI):
                            lr_scheduler=parsed_cli_arguments[Hyperparameters.LR_SCHEDULER.value],
                            init_lr=parsed_cli_arguments[Hyperparameters.LEARNING_RATE.value],
                            gamma=parsed_cli_arguments['gamma'],
-                           t_max=parsed_cli_arguments['t_max'],
+                           t_0=parsed_cli_arguments['t_0'],
+                           t_mult=parsed_cli_arguments['t_mult'],
                            eta_min=parsed_cli_arguments['eta_min'],
                             annealing_factor=parsed_cli_arguments[Hyperparameters.LEARNING_RATE_SCHEDULER.value],
-                            scheduler_rate=parsed_cli_arguments[Hyperparameters.SCEDULER_RATE.value]
+                            scheduler_rate=parsed_cli_arguments[Hyperparameters.SCEDULER_RATE.value],
+                            freeze_weights=parsed_cli_arguments[CLI.FREEZE_WEIGHTS.value]
                             )
 
         trained_model, validation_metric = palm_net.train_model(training_data=DataLoader(training_data,
