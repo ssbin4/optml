@@ -60,7 +60,7 @@ class PalmNet(object):
 
     def __init__(self, validation_frequency, model,  model_checkpointing, torch_checkpoint_location,
                  epochs, gd_optimizer, loss_function, learning_rate_scheduler, lr_scheduler, init_lr, 
-                 gamma, t_max, eta_min, annealing_factor,scheduler_rate):
+                 gamma, t_0, t_mult, eta_min, annealing_factor,scheduler_rate):
         self.validation_frequency = validation_frequency
         self.model = model
         model.to(device)
@@ -76,7 +76,8 @@ class PalmNet(object):
         self.lr_scheduler = lr_scheduler
         self.init_lr = init_lr
         self.gamma = gamma
-        self.t_max = t_max
+        self.t_0 = t_0
+        self.t_mult = t_mult
         self.eta_min = eta_min
         self.annealing_factor = annealing_factor
         self.scheduler_rate = scheduler_rate
@@ -90,7 +91,7 @@ class PalmNet(object):
         elif self.lr_scheduler == 'exp':
             path_name += '_gamma%0.3f' % self.gamma
         elif self.lr_scheduler == 'cos':
-            path_name += '_tmax_%deta%0.3f' % (self.t_max, self.eta_min)
+            path_name += '_t0_%d_tmult%d_eta%0.3f' % (self.t_0, self.t_mult, self.eta_min)
 
         self.model_directory = os.path.join(self.torch_checkpoint_location,path_name)
         logging.info("generating training directory in %s", self.model_directory)
@@ -111,7 +112,8 @@ class PalmNet(object):
             "annealing_factor": self.annealing_factor,
             "step": self.scheduler_rate,
             "gamma": self.gamma,
-            "t_max": self.t_max,
+            "t_0": self.t_0,
+            "t_mult": self.t_mult,
             "eta_min": self.eta_min
         }
         """
@@ -271,7 +273,7 @@ class PalmNet(object):
         elif self.lr_scheduler == 'exp':
             path_name += 'gamma%0.2f' % self.gamma
         elif self.lr_scheduler == 'cos':
-            path_name += 't_max%deta_min%0.3f' % (self.t_max, self.eta_min)
+            path_name += 't0_%d_tmult%d_eta_min%0.3f' % (self.t_0, self.t_mult, self.eta_min)
         model_checkpoint_path = self.model_directory
         logging.info("saving model at %s", model_checkpoint_path)
         torch.save({'epoch': epoch, 'model_state_dict': self.model.state_dict(),
