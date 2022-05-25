@@ -74,13 +74,16 @@ python run_resnet_training_cli.py
 --batch_size <batch size>
 --weight_decay <weight decay(L2 regularziation loss)>
 --lr_scheduler <learning scheduler to use. choose in {const, step, exp, cos, reduce}>
+--t_0 <Number of iterations for the first restart when using cosineannealing warm restarts scheduler> 
+--t_mult <How much t_0 increases every cycle when using cosineannealing warm restarts scheduler> 
+--eta_min <Minimum learning rate when using cosineannealing warm restarts scheduler>
 --annealing_factor <new_learning rate = annealing_factor * current_learning_rate in 'step' and 'reduce'>
 --momentum <momentum in SGD>
 --init_lr <initial learning rate value>
 --scheduler_rate <interval to apply learning rate scheduling in 'step' and 'reduce'>
 --no-nesterov
 {--freeze_weights | --no-freeze_weights} <whether to freeze the pretrained network or not>
-{--diff_lr | --same-lr} <whether to use different inital learning rate for the pretrained network and final FC layer or not>
+{--diff_lr | --same_lr} <whether to use different inital learning rate for the pretrained network and final FC layer or not>
 --gamma 0.990 <gamma value used in 'exp'>
 --fc_init_lr <initial learning rate for final FC layer when use --diff_lr option>
 ```
