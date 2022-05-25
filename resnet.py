@@ -60,7 +60,7 @@ class PalmNet(object):
 
     def __init__(self, validation_frequency, model,  model_checkpointing, torch_checkpoint_location,
                  epochs, gd_optimizer, loss_function, learning_rate_scheduler, lr_scheduler, init_lr, 
-                 gamma, t_0, t_mult, eta_min, annealing_factor,scheduler_rate,freeze_weights):
+                 gamma, t_0, t_mult, eta_min, annealing_factor,scheduler_rate,freeze_weights, diff_lr, fc_init_lr):
         self.validation_frequency = validation_frequency
         self.model = model
         model.to(device)
@@ -82,14 +82,20 @@ class PalmNet(object):
         self.annealing_factor = annealing_factor
         self.scheduler_rate = scheduler_rate
         self.freeze_weights = freeze_weights
+        self.diff_lr = diff_lr
+        self.fc_init_lr = fc_init_lr
         if self.model_checkpointing is not None:
             self.generate_directory()
 
     def generate_directory(self):
         if self.freeze_weights:
-            path_name = "freeze_" + self.lr_scheduler + '_initlr_%0.4f' % self.init_lr
+            path_name = "freeze_" + self.lr_scheduler
         else:
-            path_name = self.lr_scheduler + '_initlr_%0.4f' % self.init_lr
+            path_name = self.lr_scheduler
+        if self.diff_lr:
+            path_name += '_diffinit_base_%0.4f' % self.init_lr + '_fc_%0.4f' % self.fc_init_lr
+        else:
+            path_name += '_initlr_%0.4f' % self.init_lr
         if self.lr_scheduler == 'step' or self.lr_scheduler == 'reduce':
             path_name += '_factor%0.3f_step%d' % (self.annealing_factor, self.scheduler_rate)
         elif self.lr_scheduler == 'exp':
@@ -261,12 +267,21 @@ class PalmNet(object):
                                                                                           running_validation_loss / len(validation_data.dataset),
                                                                                           validation_accuracy))
                 
-                wandb.log({"train": {"loss": running_training_loss / len(training_data.dataset), "acc": (running_training_correct_count.double() / len(training_data.dataset))},
+                if self.diff_lr:
+                    wandb.log({"train": {"loss": running_training_loss / len(training_data.dataset), "acc": (running_training_correct_count.double() / len(training_data.dataset))},
+                            "val":{"loss": running_validation_loss / len(validation_data.dataset), "acc": validation_accuracy},
+                            "learning_rate": self.gd_optimizer.param_groups[0]['lr'], "fc_learning_rate": self.gd_optimizer.param_groups[1]['lr']})
+                else:
+                    wandb.log({"train": {"loss": running_training_loss / len(training_data.dataset), "acc": (running_training_correct_count.double() / len(training_data.dataset))},
                             "val":{"loss": running_validation_loss / len(validation_data.dataset), "acc": validation_accuracy},
                             "learning_rate": self.gd_optimizer.param_groups[0]['lr']})
             
             else:
-                wandb.log({"train": {"loss": running_training_loss / len(training_data.dataset), "acc": (running_training_correct_count.double() / len(training_data.dataset))},
+                if self.diff_lr:
+                    wandb.log({"train": {"loss": running_training_loss / len(training_data.dataset), "acc": (running_training_correct_count.double() / len(training_data.dataset))},
+                            "learning_rate": self.gd_optimizer.param_groups[0]['lr'], "fc_learning_rate": self.gd_optimizer.param_groups[1]['lr']})
+                else:
+                    wandb.log({"train": {"loss": running_training_loss / len(training_data.dataset), "acc": (running_training_correct_count.double() / len(training_data.dataset))},
                             "learning_rate": self.gd_optimizer.param_groups[0]['lr']})
         # orchestrate hook to keep track of metric
         #orchestrate.io.log_metric('accuracy', validation_accuracy)

@@ -1,4 +1,4 @@
-from ast import parse
+from ast import Store, parse
 from torch.utils.data import DataLoader
 from resnet import get_pretrained_resnet
 import torch
@@ -40,13 +40,16 @@ class ResnetTrainingCLI(StanfordCarsCLI):
                             help = "t_mult value used in cosine annealing decay", default=1)
         parser.add_argument("--eta_min", dest='eta_min', type=float,
                             help = "eta_min used in exponential decay", default=0.001)
+        parser.add_argument("--fc_init_lr", dest='fc_init_lr', type=float,
+                            help = "initial lr value for final FC layer when applying different initial learning rate", default=0.01)
         parser.add_argument("--" + Hyperparameters.MOMENTUM.value, dest=Hyperparameters.MOMENTUM.value, type=float,
                             help = "momentum to use", required=True)
         parser.add_argument("--" + Hyperparameters.NESTEROV.value, dest=Hyperparameters.NESTEROV.value, action='store_true',
                             help="use Nesterov")
         parser.add_argument("--" + "no-"+ Hyperparameters.NESTEROV.value, dest=Hyperparameters.NESTEROV.value, action='store_false',
                             help="do not use Nesterov")
-
+        parser.add_argument("--diff_lr", dest='diff_lr', action='store_true', help="Use different initial lr for pretrained network and final FC layer")
+        parser.add_argument("--same_lr", dest="diff_lr", action='store_false', help="Use same initial lr for pretrained network and final FC layer")
         return parser
 
     def load_datasets(self, parsed_cli_arguments):
@@ -61,7 +64,19 @@ class ResnetTrainingCLI(StanfordCarsCLI):
                                                         parsed_cli_arguments[CLI.MODEL.value])
         cross_entropy_loss = torch.nn.CrossEntropyLoss()
 
-        sgd_optimizer = torch.optim.SGD(resnet_pretrained_model.parameters(),
+        
+        if parsed_cli_arguments['diff_lr']:
+            fc_list = ['fc.weight', 'fc.bias']
+            base_params = list(map(lambda x: x[1],list(filter(lambda kv: kv[0] not in fc_list, resnet_pretrained_model.named_parameters()))))
+            fc_params = list(map(lambda x: x[1],list(filter(lambda kv: kv[0] in fc_list, resnet_pretrained_model.named_parameters()))))
+            sgd_optimizer = torch.optim.SGD([{'params': base_params, 'lr': parsed_cli_arguments[Hyperparameters.LEARNING_RATE.value]},
+                                            {'params': fc_params, 'lr': parsed_cli_arguments['fc_init_lr']}
+                                            ],
+                                        momentum=parsed_cli_arguments[Hyperparameters.MOMENTUM.value],
+                                        weight_decay=parsed_cli_arguments[Hyperparameters.WEIGHT_DECAY.value],
+                                        nesterov=parsed_cli_arguments[Hyperparameters.NESTEROV.value])
+        else:
+            sgd_optimizer = torch.optim.SGD(resnet_pretrained_model.parameters(),
                                         lr=parsed_cli_arguments[Hyperparameters.LEARNING_RATE.value],
                                         momentum=parsed_cli_arguments[Hyperparameters.MOMENTUM.value],
                                         weight_decay=parsed_cli_arguments[Hyperparameters.WEIGHT_DECAY.value],
@@ -97,7 +112,9 @@ class ResnetTrainingCLI(StanfordCarsCLI):
                            eta_min=parsed_cli_arguments['eta_min'],
                             annealing_factor=parsed_cli_arguments[Hyperparameters.LEARNING_RATE_SCHEDULER.value],
                             scheduler_rate=parsed_cli_arguments[Hyperparameters.SCEDULER_RATE.value],
-                            freeze_weights=parsed_cli_arguments[CLI.FREEZE_WEIGHTS.value]
+                            freeze_weights=parsed_cli_arguments[CLI.FREEZE_WEIGHTS.value],
+                            diff_lr = parsed_cli_arguments['diff_lr'],
+                            fc_init_lr = parsed_cli_arguments['fc_init_lr']
                             )
 
         trained_model, validation_metric = palm_net.train_model(training_data=DataLoader(training_data,

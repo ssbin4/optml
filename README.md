@@ -79,7 +79,8 @@ python run_resnet_training_cli.py
 --init_lr 0.0001 <initial learning rate value>
 --scheduler_rate 10 <interval to apply learning rate scheduling in 'step' and 'reduce'>
 --no-nesterov
-{--freeze_weights | --no-freeze_weights} <whether to freeze the pretrained networks or not>
+{--freeze_weights | --no-freeze_weights} <whether to freeze the pretrained network or not>
+{--diff_lr | --same-lr} <whether to use different inital learning rate for the pretrained network and final FC layer or not>
 --gamma 0.990 <gamma value used in 'exp'>
 ```
 
